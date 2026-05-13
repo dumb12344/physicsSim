@@ -5,6 +5,7 @@ let timeScale = 4;
 let bounceEnergyLoss = 0.8;
 let placementRadius = 15;
 let placementMass = 10;
+let constantDensity = true;
 class CircleParticle {
     constructor (x, y, mass = 1, radius = 1) {
         this.position = createVector(x, y);
@@ -43,15 +44,41 @@ class CircleParticle {
         let collided = false;
         if (this.position.y + this.r >= height) {
             this.velocity.mult(1, -0.5);
+            this.position.y = height - this.r - 1;
             collided = true;
         }
-        for (let i of particles) {
-            if (i.uuid == this.uuid) continue;
-            if (this.position.dist(i.position) <= i.r + this.r) {
+        if (this.position.x + this.r >= width) {
+            this.velocity.mult(-0.5, 1);
+            this.position.x = width - this.r - 1;
+            collided = true;
+        }
+        if (this.position.x - this.r <= 0) {
+            this.velocity.mult(-0.5, 1);
+            this.position.x = this.r + 1;
+            collided = true;
+        }
+        if (this.position.y - this.r <= 0) {
+            this.velocity.mult(1, -0.5);
+            this.position.y = this.r + 1;
+            collided = true;
+        }
+        for (let iterator of particles) {
+            if (iterator.uuid == this.uuid) continue;
+            if (this.position.dist(iterator.position) <= iterator.r + this.r) {
+                // we need to conserve momentum and energy
+                // sum of all momentum (mass * velocity) constant
+                // sum of all kinetic energy (1/2 mass * velocity ^ 2) constant
+                // 1/2 can be cancelled because it will occur on both sides
+                // also mass is constant, change in mass = 0
+                // 1 is this, 2 is i
+                // i is initial, f is final
+                // conservation of momentum: m_1i * v_1i + m_2i * v_2i = m_1f * v_1f + m_2f * v_2f
+                // conservation of energy: m_1i * v_1i^2 + m_2i * v_2i^2 = m_1f * v_1f^2 + m_2f * v_2f^2
+                //
                 let impulse = this.velocity.copy().mult(this.m);
                 this.velocity.mult(0);
-                i.velocity.add(impulse.div(i.m));
-                this.collided = true;
+                iterator.velocity.add(impulse.div(iterator.m));
+                collided = true;
             }
         }
         if (collided) {
@@ -63,7 +90,7 @@ class CircleParticle {
 }
 function setup () {
     frameRate(60);
-    createCanvas(800, 600);
+    createCanvas(1600, 700);
     document.querySelector('canvas').addEventListener('contextmenu', e => e.preventDefault())
     colorMode(HSB, 1);
     textAlign(CENTER, CENTER);
@@ -121,19 +148,23 @@ function resolveCollision (a, b) {
 }
 
 function draw () {
+    if (constantDensity) {
+        placementMass = placementRadius;
+        particles.forEach((i) => {i.m = i.r});
+    }
     noStroke();
     background(220/255);
     let dt = timeScale * deltaTime / 1000
     fill(0,0,0,0.5)
     circle(mouseX, mouseY, placementRadius * 2);
     fill(0,0,1);
-    text(placementMass, mouseX, mouseY);
+    text(Math.floor(placementMass), mouseX, mouseY);
     particles.forEach((i) => {
         noStroke();
         fill(i.color);
         circle(i.position.x, i.position.y, i.r * 2);
         fill(0.5 + hue(i.color), 1, 0);
-        text(i.m, i.position.x, i.position.y);
+        text(Math.floor(i.m), i.position.x, i.position.y);
         if (i.mouseGrab) {
             stroke(0,0,0);
             strokeWeight(1);
@@ -145,6 +176,7 @@ function draw () {
 }
 
 function mousePressed () {
+    if (mouseX > width || mouseY > height) return;
     if (mouseButton === LEFT) {
         particles.push(new CircleParticle(mouseX, mouseY, placementMass, placementRadius));
     }
@@ -169,7 +201,7 @@ function mousePressed () {
 
 function mouseWheel (event) {
     if (key === "Shift" && keyIsPressed) {
-        placementMass -= Math.round(event.deltaY / 20);
+        placementMass -= event.deltaY / 20;
     }
     else {
         placementRadius -= event.deltaY / 20;
@@ -178,7 +210,7 @@ function mouseWheel (event) {
 
 function keyPressed () {
     if (key === "Shift") {
-        placementMass += Math.round(6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0)));
+        placementMass += 6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
     }
     else {
         placementRadius += 6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
@@ -190,3 +222,8 @@ function mouseReleased () {
         i.mouseGrab = false;
     })
 }
+
+document.getElementById("constantDensity").addEventListener("click", () => {
+    constantDensity = !constantDensity
+    document.getElementById("constantDensity").innerText = `Constant density: ${constantDensity ? "on" : "off"}`
+})
