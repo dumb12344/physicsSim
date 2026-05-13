@@ -4,55 +4,64 @@ let pixelScale = 5;
 let timeScale = 4;
 let bounceEnergyLoss = 0.8;
 let placementRadius = 15;
+let placementMass = 10;
 class CircleParticle {
     constructor (x, y, mass = 1, radius = 1) {
         this.position = createVector(x, y);
         this.m = mass;
         this.r = radius;
-        this.forces = [
-            // gravity
-            function (ref) {
+        this.forces = {
+            gravity: function (ref) {
                 return createVector(0, -9.8 * ref.m);
+            },
+            mouseSpring: function (ref) {
+                return ref.position.copy().sub(createVector(mouseX, mouseY)).mult(0);
             }
-        ];
+        };
         this.uuid = self.crypto.randomUUID();
         this.velocity = createVector(0, 0);
         this.acceleration = createVector(0, 0);
+        this.color = color(Math.random(), 1, 1);
     }
 
     tick (dt) {
         this.acceleration.mult(0);
-        for (let i of this.forces) {
-            let dtForce = i(this);
-            dtForce.mult(dt);
-            this.acceleration.add(dtForce);
-        }
-        let dtAccel = this.acceleration.copy();
-        dtAccel.mult(dt);
-        this.velocity.add(dtAccel);
-        let dtVel = this.velocity.copy();
-        dtVel.mult(dt);
-        // invert because JS canvas is weird
-        // scale because pixels are small
-        dtVel.mult(10, -10);
-        this.position.add(dtVel);
+        Object.entries(this.forces).map((entry) => {
+            let i = entry[1];
+            this.acceleration.add(i(this).div(this.m).mult(dt));
+        })
+        this.velocity.add(this.acceleration.copy().mult(dt));
     }
 
-    collisions () {
+    collisions (dt) {
+        let collided = false;
+        if (this.position.y + this.r >= height) {
+            this.position.sub(this.velocity.copy().mult(dt).mult(10, -10));
+            this.velocity.mult(1, -0.5);
+            collided = true;
+        }
         for (let i of particles) {
             if (i.uuid == this.uuid) continue;
-            let diff = this.position.copy();
-            diff.sub(i.position);
-            if (diff.mag() <= i.r + this.r) {
+            if (this.position.dist(i.position) <= i.r + this.r) {
+                this.position.sub(this.velocity.copy().mult(dt).mult(10, -10));
+                let impulse = this.velocity.copy().mult(this.m);
                 this.velocity.mult(0);
-                i.velocity.mult(0);
+                i.velocity.add(impulse.div(i.m));
+                this.collided = true;
             }
+        }
+        if (!collided) {
+            // invert because JS canvas is weird
+            // scale because pixels are small
+            this.position.add(this.velocity.copy().mult(dt).mult(30, -30));
         }
     }
 }
 function setup () {
     frameRate(60);
     createCanvas(800, 600);
+    document.querySelector('canvas').addEventListener('contextmenu', e => e.preventDefault())
+    colorMode(HSB, 1);
 }
 
 //gpt for later implementation
@@ -107,26 +116,51 @@ function resolveCollision (a, b) {
 }
 
 function draw () {
-    background(220);
+    noStroke();
+    background(220/255);
     let dt = timeScale * deltaTime / 1000
-    stroke(0,0,0,100)
-    strokeWeight(placementRadius * 2);
-    point(mouseX, mouseY);
-    for (let i of particles) {
-        stroke(0,0,0);
-        strokeWeight(i.r * 2);
-        point(i.position.x, i.position.y);
+    fill(0,0,0,0.5)
+    circle(mouseX, mouseY, placementRadius * 2);
+    particles.forEach((i) => {
+        fill(i.color);
+        circle(i.position.x, i.position.y, i.r * 2);
+        fill(0.5 + hue(i.color), 1, 0);
+        textAlign(CENTER, CENTER);
+        text(i.m, i.position.x, i.position.y);
         i.tick(dt);
-        i.collisions();
-    }
+        i.collisions(dt);
+    })
 }
 
 function mousePressed () {
-    particles.push(new CircleParticle(mouseX, mouseY, 10, placementRadius))
+    if (mouseButton === LEFT) {
+        particles.push(new CircleParticle(mouseX, mouseY, placementMass, placementRadius));
+    }
+    else if (mouseButton === CENTER) {
+        particles.forEach((i) => {
+            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= i.r) {
+                particles = particles.filter((particle) => {
+                    return particle.uuid !== i.uuid;
+                })
+            }
+        })
+    }
+    else if (mouseButton === RIGHT) {
+        particles.forEach((i) => {
+            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= i.r) {
+                
+            }
+        })
+    }
 }
 
 function mouseWheel (event) {
-    placementRadius -= event.deltaY / 20;
+    if (key === "Shift") {
+        placementMass -= Math.round(event.deltaY / 20);
+    }
+    else {
+        placementRadius -= event.deltaY / 20;
+    }
 }
 
 function keyPressed () {
