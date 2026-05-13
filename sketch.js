@@ -15,9 +15,14 @@ class CircleParticle {
                 return createVector(0, -9.8 * ref.m);
             },
             mouseSpring: function (ref) {
-                return ref.position.copy().sub(createVector(mouseX, mouseY)).mult(0);
+                if (!ref.mouseGrab) {
+                    return createVector(0);
+                }
+                let diff = ref.position.copy().sub(createVector(mouseX, mouseY));
+                return diff.mult(-10, 10).add(ref.velocity.copy().mult(-30));
             }
         };
+        this.mouseGrab = false;
         this.uuid = self.crypto.randomUUID();
         this.velocity = createVector(0, 0);
         this.acceleration = createVector(0, 0);
@@ -34,26 +39,25 @@ class CircleParticle {
     }
 
     collisions (dt) {
+        this.position.add(this.velocity.copy().mult(dt).mult(30, -30));
         let collided = false;
         if (this.position.y + this.r >= height) {
-            this.position.sub(this.velocity.copy().mult(dt).mult(10, -10));
             this.velocity.mult(1, -0.5);
             collided = true;
         }
         for (let i of particles) {
             if (i.uuid == this.uuid) continue;
             if (this.position.dist(i.position) <= i.r + this.r) {
-                this.position.sub(this.velocity.copy().mult(dt).mult(10, -10));
                 let impulse = this.velocity.copy().mult(this.m);
                 this.velocity.mult(0);
                 i.velocity.add(impulse.div(i.m));
                 this.collided = true;
             }
         }
-        if (!collided) {
+        if (collided) {
             // invert because JS canvas is weird
             // scale because pixels are small
-            this.position.add(this.velocity.copy().mult(dt).mult(30, -30));
+            this.position.sub(this.velocity.copy().mult(dt).mult(30, -30));
         }
     }
 }
@@ -62,6 +66,7 @@ function setup () {
     createCanvas(800, 600);
     document.querySelector('canvas').addEventListener('contextmenu', e => e.preventDefault())
     colorMode(HSB, 1);
+    textAlign(CENTER, CENTER);
 }
 
 //gpt for later implementation
@@ -121,12 +126,19 @@ function draw () {
     let dt = timeScale * deltaTime / 1000
     fill(0,0,0,0.5)
     circle(mouseX, mouseY, placementRadius * 2);
+    fill(0,0,1);
+    text(placementMass, mouseX, mouseY);
     particles.forEach((i) => {
+        noStroke();
         fill(i.color);
         circle(i.position.x, i.position.y, i.r * 2);
         fill(0.5 + hue(i.color), 1, 0);
-        textAlign(CENTER, CENTER);
         text(i.m, i.position.x, i.position.y);
+        if (i.mouseGrab) {
+            stroke(0,0,0);
+            strokeWeight(1);
+            line(i.position.x, i.position.y, mouseX, mouseY);
+        }
         i.tick(dt);
         i.collisions(dt);
     })
@@ -147,15 +159,16 @@ function mousePressed () {
     }
     else if (mouseButton === RIGHT) {
         particles.forEach((i) => {
-            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= i.r) {
-                
+            let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+            if (diff.mag() <= 100 + i.r) {
+                i.mouseGrab = true;
             }
         })
     }
 }
 
 function mouseWheel (event) {
-    if (key === "Shift") {
+    if (key === "Shift" && keyIsPressed) {
         placementMass -= Math.round(event.deltaY / 20);
     }
     else {
@@ -164,10 +177,16 @@ function mouseWheel (event) {
 }
 
 function keyPressed () {
-    if (key === "ArrowUp") {
-        placementRadius += 6.7;
+    if (key === "Shift") {
+        placementMass += Math.round(6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0)));
     }
-    else if (key === "ArrowDown") {
-        placementRadius -= 6.7;
+    else {
+        placementRadius += 6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
     }
+}
+
+function mouseReleased () {
+    particles.forEach((i) => {
+        i.mouseGrab = false;
+    })
 }
