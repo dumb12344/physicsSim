@@ -6,9 +6,9 @@ let bounceEnergyLoss = 0.8;
 let placementRadius = 15;
 let placementMass = 10;
 let constantDensity = true;
-let blur = false;
-window.onblur = () => blur = true;
-window.onfocus = () => blur = false;
+let pause = false;
+window.onblur = () => pause = true;
+// window.onfocus = () => blur = false;
 class CircleParticle {
     constructor (x, y, mass = 1, radius = 1) {
         this.position = createVector(x, y);
@@ -153,7 +153,14 @@ function resolveCollision (a, b) {
 }
 
 function draw () {
-    if (blur) return;
+    if (pause) {
+        noStroke();
+        fill(0,0,0);
+        textSize(96)
+        text("Paused", width / 2, height / 2);
+        return;
+    }
+    textSize(12)
     if (constantDensity) {
         placementMass = placementRadius;
         particles.forEach((i) => {i.m = i.r});
@@ -220,6 +227,9 @@ function keyPressed () {
     }
     else {
         placementRadius += 6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
+    }
+    if (key === " ") {
+        pause = !pause;
     }
 }
 
