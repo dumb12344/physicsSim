@@ -6,6 +6,9 @@ let bounceEnergyLoss = 0.8;
 let placementRadius = 15;
 let placementMass = 10;
 let constantDensity = true;
+let blur = false;
+window.onblur = () => blur = true;
+window.onfocus = () => blur = false;
 class CircleParticle {
     constructor (x, y, mass = 1, radius = 1) {
         this.position = createVector(x, y);
@@ -20,7 +23,13 @@ class CircleParticle {
                     return createVector(0);
                 }
                 let diff = ref.position.copy().sub(createVector(mouseX, mouseY));
-                return diff.mult(-10, 10).add(ref.velocity.copy().mult(-30));
+                return diff.mult(-10, 10);
+            },
+            mouseSpringDampening: function (ref) {
+                if (!ref.mouseGrab) {
+                    return createVector(0);
+                }
+                return ref.velocity.copy().mult(-30);
             }
         };
         this.mouseGrab = false;
@@ -45,22 +54,18 @@ class CircleParticle {
         if (this.position.y + this.r >= height) {
             this.velocity.mult(1, -0.5);
             this.position.y = height - this.r - 1;
-            collided = true;
         }
         if (this.position.x + this.r >= width) {
             this.velocity.mult(-0.5, 1);
             this.position.x = width - this.r - 1;
-            collided = true;
         }
         if (this.position.x - this.r <= 0) {
             this.velocity.mult(-0.5, 1);
             this.position.x = this.r + 1;
-            collided = true;
         }
         if (this.position.y - this.r <= 0) {
             this.velocity.mult(1, -0.5);
             this.position.y = this.r + 1;
-            collided = true;
         }
         for (let iterator of particles) {
             if (iterator.uuid == this.uuid) continue;
@@ -89,7 +94,7 @@ class CircleParticle {
     }
 }
 function setup () {
-    frameRate(60);
+    frameRate(240);
     createCanvas(1600, 700);
     document.querySelector('canvas').addEventListener('contextmenu', e => e.preventDefault())
     colorMode(HSB, 1);
@@ -148,6 +153,7 @@ function resolveCollision (a, b) {
 }
 
 function draw () {
+    if (blur) return;
     if (constantDensity) {
         placementMass = placementRadius;
         particles.forEach((i) => {i.m = i.r});
