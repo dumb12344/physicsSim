@@ -165,13 +165,8 @@ function draw () {
         placementMass = placementRadius;
         particles.forEach((i) => {i.m = i.r});
     }
-    noStroke();
     background(220/255);
     let dt = timeScale * deltaTime / 1000
-    fill(0,0,0,0.5)
-    circle(mouseX, mouseY, placementRadius * 2);
-    fill(0,0,1);
-    text(Math.floor(placementMass), mouseX, mouseY);
     particles.forEach((i) => {
         noStroke();
         fill(i.color);
@@ -185,7 +180,12 @@ function draw () {
         }
         i.tick(dt);
         i.collisions(dt);
-    })
+    });
+    noStroke();
+    fill(0,0,0,0.5)
+    circle(mouseX, mouseY, placementRadius * 2);
+    fill(0,0,1);
+    text(Math.floor(placementMass), mouseX, mouseY);
 }
 
 function mousePressed () {
