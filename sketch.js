@@ -153,20 +153,20 @@ function resolveCollision (a, b) {
 }
 
 function draw () {
+    background(220/255);
+    let dt = timeScale * deltaTime / 1000
     if (pause) {
         noStroke();
         fill(0,0,0);
         textSize(96)
         text("Paused", width / 2, height / 2);
-        return;
+        dt = 0;
     }
     textSize(12)
     if (constantDensity) {
         placementMass = placementRadius;
         particles.forEach((i) => {i.m = i.r});
     }
-    background(220/255);
-    let dt = timeScale * deltaTime / 1000
     particles.forEach((i) => {
         noStroke();
         fill(i.color);
