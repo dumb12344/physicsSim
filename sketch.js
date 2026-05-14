@@ -1,19 +1,21 @@
 "use strict";
+document.getElementById("material").value = "wood";
 let particles = [];
-let pixelScale = 5;
+let pixelScale = 200;
 let timeScale = 4;
 let bounceEnergyLoss = 0.8;
-let placementRadius = 15;
-let placementMass = 10;
-let constantDensity = true;
+let placementRadius = 0.5;
 let pause = false;
+let placementMaterial = "wood";
 window.onblur = () => pause = true;
-// window.onfocus = () => blur = false;
+let materials = {};
 class CircleParticle {
-    constructor (x, y, mass = 1, radius = 1) {
+    constructor (x, y, radius = 1, material = "wood") {
         this.position = createVector(x, y);
-        this.m = mass;
+        // kg/m^3 -> kg/m^2 for 2d
+        // 0.1 meter depth
         this.r = radius;
+        this.m = Math.PI * ((radius) ** 2) * (materials[material].density * 0.1);
         this.forces = {
             gravity: function (ref) {
                 return createVector(0, -9.8 * ref.m);
@@ -23,7 +25,7 @@ class CircleParticle {
                     return createVector(0);
                 }
                 let diff = ref.position.copy().sub(createVector(mouseX, mouseY));
-                return diff.mult(-10, 10);
+                return diff.mult(-5, 5);
             },
             mouseSpringDampening: function (ref) {
                 if (!ref.mouseGrab) {
@@ -36,7 +38,7 @@ class CircleParticle {
         this.uuid = self.crypto.randomUUID();
         this.velocity = createVector(0, 0);
         this.acceleration = createVector(0, 0);
-        this.color = color(Math.random(), 1, 1);
+        this.material = material;
     }
 
     tick (dt) {
@@ -48,34 +50,51 @@ class CircleParticle {
         this.velocity.add(this.acceleration.copy().mult(dt));
         // invert because JS canvas is weird
         // scale because pixels are small
-        this.position.add(this.velocity.copy().mult(dt).mult(30, -30));
+        this.position.add(this.velocity.copy().mult(dt).mult(pixelScale, -pixelScale));
     }
 
-    wallCollisions (dt) {
-        if (this.position.y + this.r >= height) {
+    wallCollisions () {
+        if (this.position.y + (this.r * pixelScale) >= height) {
             this.velocity.mult(1, -0.5);
-            this.position.y = height - this.r - 1;
+            this.position.y = height - (this.r * pixelScale) - 1;
         }
-        if (this.position.x + this.r >= width) {
+        if (this.position.x + (this.r * pixelScale) >= width) {
             this.velocity.mult(-0.5, 1);
-            this.position.x = width - this.r - 1;
+            this.position.x = width - (this.r * pixelScale) - 1;
         }
-        if (this.position.x - this.r <= 0) {
+        if (this.position.x - (this.r * pixelScale) <= 0) {
             this.velocity.mult(-0.5, 1);
-            this.position.x = this.r + 1;
+            this.position.x = (this.r * pixelScale) + 1;
         }
-        if (this.position.y - this.r <= 0) {
+        if (this.position.y - (this.r * pixelScale) <= 0) {
             this.velocity.mult(1, -0.5);
-            this.position.y = this.r + 1;
+            this.position.y = (this.r * pixelScale) + 1;
         }
     }
 }
 function setup () {
     frameRate(240);
-    createCanvas(1600, 700);
+    createCanvas(1600, 800);
     document.querySelector('canvas').addEventListener('contextmenu', e => e.preventDefault())
     colorMode(HSB, 1);
     textAlign(CENTER, CENTER);
+    materials = {
+        "wood" : {
+            "density": 410,
+            "color": color(0.0785555556, 0.3867, 0.5588),
+            "contrastColor": color(0,0,1)
+        },
+        "stone" : {
+            "density": 1700,
+            "color": color(0, 0, 0.6471),
+            "contrastColor": color(0,0,1)
+        },
+        "steel" : {
+            "density": 7850,
+            "color": color(0, 0, 0.3471),
+            "contrastColor": color(0,0,1)
+        }
+    }
 }
 
 //gpt for later implementation
@@ -130,7 +149,7 @@ function resolveCollision (a, b) {
 }
 
 function collisionCheck (a, b) {
-    if (a.position.dist(b.position) <= a.r + b.r) {
+    if (a.position.dist(b.position) <= (a.r * pixelScale) + (b.r * pixelScale)) {
         // we need to conserve momentum and energy
         // sum of all momentum (mass * velocity) constant
         // sum of all kinetic energy (1/2 mass * velocity ^ 2) constant
@@ -142,13 +161,21 @@ function collisionCheck (a, b) {
         // conservation of energy: m_1i * v_1i^2 + m_2i * v_2i^2 = m_1f * v_1f^2 + m_2f * v_2f^2
         //
         let impulse = a.velocity.copy().mult(a.m);
-        a.velocity = createVector(0, 0);
-        b.velocity.add(impulse.div(b.m));
+        //a.velocity = createVector(0, 0);
+        //b.velocity.add(impulse.div(b.m));
     }
 }
 
 function draw () {
     background(220/255);
+    for (let i = 0; i <= width / pixelScale; i++) {
+        for (let j = 0; j <= height / pixelScale; j++) {
+            stroke(0,0,0);
+            strokeWeight(1);
+            line(i * pixelScale, 0, i * pixelScale, height);
+            line(0, j * pixelScale, width, j * pixelScale);
+        }
+    }
     let dt = timeScale * deltaTime / 1000
     if (pause) {
         noStroke();
@@ -157,24 +184,20 @@ function draw () {
         text("Paused", width / 2, height / 2);
         dt = 0;
     }
-    textSize(12)
-    if (constantDensity) {
-        placementMass = placementRadius;
-        particles.forEach((i) => {i.m = i.r});
-    }
+    textSize(12);
     particles.forEach((i) => {
         noStroke();
-        fill(i.color);
-        circle(i.position.x, i.position.y, i.r * 2);
-        fill(0.5 + hue(i.color), 1, 0);
-        text(Math.floor(i.m), i.position.x, i.position.y);
+        fill(materials[i.material].color);
+        circle(i.position.x, i.position.y, i.r * pixelScale * 2);
+        fill(materials[i.material].contrastColor);
+        text(Math.floor(i.m).toFixed(), i.position.x, i.position.y);
         if (i.mouseGrab) {
             stroke(0,0,0);
             strokeWeight(1);
             line(i.position.x, i.position.y, mouseX, mouseY);
         }
         i.tick(dt);
-        i.wallCollisions(dt);
+        i.wallCollisions();
     });
     for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -183,19 +206,20 @@ function draw () {
     }
     noStroke();
     fill(0,0,0,0.5)
-    circle(mouseX, mouseY, placementRadius * 2);
+    circle(mouseX, mouseY, placementRadius * pixelScale * 2);
     fill(0,0,1);
-    text(Math.floor(placementMass), mouseX, mouseY);
+    //text(Math.floor(placementRadius), mouseX, mouseY);
 }
 
 function mousePressed () {
-    if (mouseX > width || mouseY > height) return;
+    if (document.activeElement.id === "material") return;
+    if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
-        particles.push(new CircleParticle(mouseX, mouseY, placementMass, placementRadius));
+        particles.push(new CircleParticle(mouseX, mouseY, placementRadius, placementMaterial));
     }
     else if (mouseButton === CENTER) {
         particles.forEach((i) => {
-            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= i.r) {
+            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= (i.r * pixelScale)) {
                 particles = particles.filter((particle) => {
                     return particle.uuid !== i.uuid;
                 })
@@ -205,7 +229,7 @@ function mousePressed () {
     else if (mouseButton === RIGHT) {
         particles.forEach((i) => {
             let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-            if (diff.mag() <= 100 + i.r) {
+            if (diff.mag() <= 100 + (i.r * pixelScale)) {
                 i.mouseGrab = true;
             }
         })
@@ -213,21 +237,12 @@ function mousePressed () {
 }
 
 function mouseWheel (event) {
-    if (key === "Shift" && keyIsPressed) {
-        placementMass -= event.deltaY / 20;
-    }
-    else {
-        placementRadius -= event.deltaY / 20;
-    }
+    placementRadius -= event.deltaY / 800;
+    placementRadius = abs(placementRadius);
 }
 
 function keyPressed () {
-    if (key === "Shift") {
-        placementMass += 6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
-    }
-    else {
-        placementRadius += 6.7 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
-    }
+    placementRadius += 0.22 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
     if (key === " ") {
         pause = !pause;
     }
@@ -239,7 +254,6 @@ function mouseReleased () {
     })
 }
 
-document.getElementById("constantDensity").addEventListener("click", () => {
-    constantDensity = !constantDensity
-    document.getElementById("constantDensity").innerText = `Constant density: ${constantDensity ? "on" : "off"}`
+document.getElementById("material").addEventListener("change", () => {
+    placementMaterial = document.getElementById("material").value;
 })

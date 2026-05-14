@@ -11,14 +11,26 @@
   <body>
     <main>
     </main>
-    Controls:<br/>
-    Left click to spawn particle</br>
-    Scroll or arrow keys to change radius of particle</br>
-    Shift + Scroll or arrow keys to change mass of particle</br>
-    Hold Right click to add a spring force betweeen a particle and the cursor</br>
-    Middle click to remove particle</br>
-    Space to toggle pause</br>
-    <button id="constantDensity">Constant density: on</button>
+    <div style="display: flex; flex-direction: row;">
+      <div style="font-size: 14px; display: inline">
+        Controls:
+        Left click to spawn particle</br>
+        Scroll or arrow keys to change radius of particle</br>
+        Shift + Scroll or arrow keys to change mass of particle</br>
+        Hold Right click to add a spring force betweeen a particle and the cursor</br>
+        Middle click to remove particle</br>
+        Space to toggle pause</br>
+      </div>
+      <div style="font-size: 14px; display: inline">
+        Each grid space is 1 square metre<br/>
+        <label>Material: </label>
+        <select id="material">
+          <option value="wood" selected>Wood</option>
+          <option value="stone">Stone</option>
+          <option value="steel">Steel</option>
+        </select>
+      </div>
+    </div>
     <script src="sketch.js"></script>
   </body>
 </html>
