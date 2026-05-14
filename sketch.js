@@ -46,11 +46,12 @@ class CircleParticle {
             this.acceleration.add(i(this).div(this.m).mult(dt));
         })
         this.velocity.add(this.acceleration.copy().mult(dt));
+        // invert because JS canvas is weird
+        // scale because pixels are small
+        this.position.add(this.velocity.copy().mult(dt).mult(30, -30));
     }
 
-    collisions (dt) {
-        this.position.add(this.velocity.copy().mult(dt).mult(30, -30));
-        let collided = false;
+    wallCollisions (dt) {
         if (this.position.y + this.r >= height) {
             this.velocity.mult(1, -0.5);
             this.position.y = height - this.r - 1;
@@ -66,30 +67,6 @@ class CircleParticle {
         if (this.position.y - this.r <= 0) {
             this.velocity.mult(1, -0.5);
             this.position.y = this.r + 1;
-        }
-        for (let iterator of particles) {
-            if (iterator.uuid == this.uuid) continue;
-            if (this.position.dist(iterator.position) <= iterator.r + this.r) {
-                // we need to conserve momentum and energy
-                // sum of all momentum (mass * velocity) constant
-                // sum of all kinetic energy (1/2 mass * velocity ^ 2) constant
-                // 1/2 can be cancelled because it will occur on both sides
-                // also mass is constant, change in mass = 0
-                // 1 is this, 2 is i
-                // i is initial, f is final
-                // conservation of momentum: m_1i * v_1i + m_2i * v_2i = m_1f * v_1f + m_2f * v_2f
-                // conservation of energy: m_1i * v_1i^2 + m_2i * v_2i^2 = m_1f * v_1f^2 + m_2f * v_2f^2
-                //
-                let impulse = this.velocity.copy().mult(this.m);
-                this.velocity.mult(0);
-                iterator.velocity.add(impulse.div(iterator.m));
-                collided = true;
-            }
-        }
-        if (collided) {
-            // invert because JS canvas is weird
-            // scale because pixels are small
-            this.position.sub(this.velocity.copy().mult(dt).mult(30, -30));
         }
     }
 }
@@ -152,6 +129,24 @@ function resolveCollision (a, b) {
     b.vy += iy / b.mass;
 }
 
+function collisionCheck (a, b) {
+    if (a.position.dist(b.position) <= a.r + b.r) {
+        // we need to conserve momentum and energy
+        // sum of all momentum (mass * velocity) constant
+        // sum of all kinetic energy (1/2 mass * velocity ^ 2) constant
+        // 1/2 can be cancelled because it will occur on both sides
+        // also mass is constant, change in mass = 0
+        // 1 is this, 2 is i
+        // i is initial, f is final
+        // conservation of momentum: m_1i * v_1i + m_2i * v_2i = m_1f * v_1f + m_2f * v_2f
+        // conservation of energy: m_1i * v_1i^2 + m_2i * v_2i^2 = m_1f * v_1f^2 + m_2f * v_2f^2
+        //
+        let impulse = a.velocity.copy().mult(a.m);
+        a.velocity = createVector(0, 0);
+        b.velocity.add(impulse.div(b.m));
+    }
+}
+
 function draw () {
     background(220/255);
     let dt = timeScale * deltaTime / 1000
@@ -179,8 +174,13 @@ function draw () {
             line(i.position.x, i.position.y, mouseX, mouseY);
         }
         i.tick(dt);
-        i.collisions(dt);
+        i.wallCollisions(dt);
     });
+    for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+            collisionCheck(particles[i], particles[j]);
+        }
+    }
     noStroke();
     fill(0,0,0,0.5)
     circle(mouseX, mouseY, placementRadius * 2);
