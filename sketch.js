@@ -82,25 +82,25 @@ function setup () {
     textAlign(CENTER, CENTER);
     materials = {
         "wood" : {
-            "density": 410,
-            "color": color(0.0785555556, 0.3867, 0.5588),
+            "density": 500,
+            "color": color(0.0786, 0.3867, 0.5588),
             "contrastColor": color(0,0,1)
         },
         "stone" : {
-            "density": 1700,
-            "color": color(0, 0, 0.6471),
+            "density": 2515,
+            "color": color(0.0000, 0.0000, 0.6471),
             "contrastColor": color(0,0,1)
         },
         "steel" : {
             "density": 7850,
-            "color": color(0, 0, 0.3471),
+            "color": color(0.0000, 0.0000, 0.3471),
             "contrastColor": color(0,0,1)
         }
     }
 }
 
 //gpt for later implementation
-function resolveCollision (a, b) {
+function resolveCollision (a, b) {  
     let dx = b.x - a.x;
     let dy = b.y - a.y;
 
