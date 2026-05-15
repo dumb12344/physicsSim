@@ -26,8 +26,8 @@ class CircleParticle {
                     return createVector(0);
                 }
                 let diff = ref.position.copy().sub(createVector(mouseX, mouseY));
-                // spring constant 5
-                return diff.mult(-5, 5);
+                // spring constant 3
+                return diff.mult(-3, 3);
             },
             mouseSpringDampening: function (ref) {
                 if (!ref.mouseGrab) {
