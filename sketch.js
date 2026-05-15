@@ -11,11 +11,12 @@ window.onblur = () => pause = true;
 let materials = {};
 class CircleParticle {
     constructor (x, y, radius = 1, material = "wood") {
-        this.position = createVector(x, y);
-        // kg/m^3 -> kg/m^2 for 2d
-        // 0.1 meter depth
+        this.material = material;
         this.r = radius;
-        this.m = Math.PI * ((radius) ** 2) * (materials[material].density * 0.1);
+        this.a = Math.PI * (this.r ** 2);
+        // kg/m^3 -> kg/m^2 for 2d
+        // 1 cm depth
+        this.m = this.a * (materials[this.material].density * 0.01);
         this.forces = {
             gravity: function (ref) {
                 return createVector(0, -9.8 * ref.m);
@@ -25,6 +26,7 @@ class CircleParticle {
                     return createVector(0);
                 }
                 let diff = ref.position.copy().sub(createVector(mouseX, mouseY));
+                // spring constant 5
                 return diff.mult(-5, 5);
             },
             mouseSpringDampening: function (ref) {
@@ -36,9 +38,9 @@ class CircleParticle {
         };
         this.mouseGrab = false;
         this.uuid = self.crypto.randomUUID();
+        this.position = createVector(x, y);
         this.velocity = createVector(0, 0);
         this.acceleration = createVector(0, 0);
-        this.material = material;
     }
 
     tick (dt) {
@@ -190,7 +192,7 @@ function draw () {
         fill(materials[i.material].color);
         circle(i.position.x, i.position.y, i.r * pixelScale * 2);
         fill(materials[i.material].contrastColor);
-        text(Math.floor(i.m).toFixed(), i.position.x, i.position.y);
+        text(Math.floor(i.m).toFixed() + " kg", i.position.x, i.position.y);
         if (i.mouseGrab) {
             stroke(0,0,0);
             strokeWeight(1);
