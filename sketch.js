@@ -9,7 +9,7 @@ let pause = false;
 let placementMaterial = "wood";
 window.onblur = () => pause = true;
 let materials = {};
-class CircleParticle {
+class circleParticle {
     constructor (x, y, radius = 1, material = "wood") {
         this.material = material;
         this.r = radius;
@@ -99,7 +99,7 @@ function setup () {
     }
 }
 
-//gpt for later implementation
+// gpt for later implementation
 function resolveCollision (a, b) {  
     let dx = b.x - a.x;
     let dy = b.y - a.y;
@@ -151,7 +151,11 @@ function resolveCollision (a, b) {
 }
 
 function collisionCheck (a, b) {
-    if (a.position.dist(b.position) <= (a.r * pixelScale) + (b.r * pixelScale)) {
+    let difference = b.position.copy().sub(a.position.copy());
+    let distance = difference.mag();
+    let collisionDistance = (a.r * pixelScale) + (b.r * pixelScale);
+    let overlap = (collisionDistance - distance);
+    if (overlap >= 0) {
         // we need to conserve momentum and energy
         // sum of all momentum (mass * velocity) constant
         // sum of all kinetic energy (1/2 mass * velocity ^ 2) constant
@@ -162,9 +166,18 @@ function collisionCheck (a, b) {
         // conservation of momentum: m_1i * v_1i + m_2i * v_2i = m_1f * v_1f + m_2f * v_2f
         // conservation of energy: m_1i * v_1i^2 + m_2i * v_2i^2 = m_1f * v_1f^2 + m_2f * v_2f^2
         //
-        let impulse = a.velocity.copy().mult(a.m);
-        //a.velocity = createVector(0, 0);
-        //b.velocity.add(impulse.div(b.m));
+        let collisionNormal = difference.copy().div(distance);
+        let relativeVelocity = b.velocity.copy().sub(a.velocity.copy());
+        let normalDot = relativeVelocity.dot(collisionNormal);
+        // seperate by overlap
+        a.position.sub(collisionNormal.copy().mult(overlap / 2));
+        b.position.add(collisionNormal.copy().mult(overlap / 2));
+        // add impulse
+        if (normalDot >= 0 ) return;
+        let impulseMag = -normalDot / (1 / a.m + 1 / b.m);
+        let impulse = collisionNormal.copy().mult(impulseMag);
+        a.velocity.sub(impulse.copy().div(a.m));
+        b.velocity.add(impulse.copy().div(b.m));
     }
 }
 
@@ -217,7 +230,7 @@ function mousePressed () {
     if (document.activeElement.id === "material") return;
     if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
-        particles.push(new CircleParticle(mouseX, mouseY, placementRadius, placementMaterial));
+        particles.push(new circleParticle(mouseX, mouseY, placementRadius, placementMaterial));
     }
     else if (mouseButton === CENTER) {
         particles.forEach((i) => {
