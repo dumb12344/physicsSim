@@ -300,8 +300,8 @@ function mousePressed () {
     else if (mouseButton === CENTER) {
         objects.forEach((i) => {
             if (i.position.copy().dist(createVector(mouseX, mouseY)) <= (i.radius * pixelScale)) {
-                objects = objects.filter((particle) => {
-                    return particle.uuid !== i.uuid;
+                objects = objects.filter((object) => {
+                    return object.uuid !== i.uuid;
                 })
             }
         })
