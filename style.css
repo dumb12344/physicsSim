@@ -5,3 +5,17 @@ html, body {
 canvas {
   display: block;
 }
+#infoDiv {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+#infoDiv > * {
+  font-size: 11px;
+  display: inline;
+  border: 1px black solid;
+}
+#material {
+  font-size: 11px;
+  height: 20px;
+}

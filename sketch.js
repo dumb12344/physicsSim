@@ -1,25 +1,29 @@
 "use strict";
-document.getElementById("material").value = "wood";
-let particles = [];
-let pixelScale = 200;
-let timeScale = 4;
-let bounceEnergyLoss = 0.8;
+let objects = [];
+const pixelScale = 200;
+const timeScale = 4;
+const bounceEnergyLoss = 0.8;
 let placementRadius = 0.5;
 let pause = false;
-let placementMaterial = "wood";
 window.onblur = () => pause = true;
+let placementMaterial = "wood";
+document.getElementById("material").value = "wood";
 let materials = {};
+let dataDiv = document.getElementById("data");
+let depth = 0.01;
+// TODO: implement basic object class to extend
+// also fix collisions
 class circleParticle {
     constructor (x, y, radius = 1, material = "wood") {
         this.material = material;
-        this.r = radius;
-        this.a = Math.PI * (this.r ** 2);
+        this.radius = radius;
+        this.area = Math.PI * (this.radius ** 2);
         // kg/m^3 -> kg/m^2 for 2d
         // 1 cm depth
-        this.m = this.a * (materials[this.material].density * 0.01);
+        this.mass = (this.area * depth) * materials[this.material].density;
         this.forces = {
             gravity: function (ref) {
-                return createVector(0, -9.8 * ref.m);
+                return createVector(0, -9.8 * ref.mass);
             },
             mouseSpring: function (ref) {
                 if (!ref.mouseGrab) {
@@ -46,8 +50,8 @@ class circleParticle {
     tick (dt) {
         this.acceleration.mult(0);
         Object.entries(this.forces).map((entry) => {
-            let i = entry[1];
-            this.acceleration.add(i(this).div(this.m).mult(dt));
+            let getForce = entry[1];
+            this.acceleration.add(getForce(this).div(this.mass).mult(dt));
         })
         this.velocity.add(this.acceleration.copy().mult(dt));
         // invert because JS canvas is weird
@@ -56,21 +60,21 @@ class circleParticle {
     }
 
     wallCollisions () {
-        if (this.position.y + (this.r * pixelScale) >= height) {
+        if (this.position.y + (this.radius * pixelScale) >= height) {
             this.velocity.mult(1, -0.5);
-            this.position.y = height - (this.r * pixelScale) - 1;
+            this.position.y = height - (this.radius * pixelScale) - 1;
         }
-        if (this.position.x + (this.r * pixelScale) >= width) {
+        if (this.position.x + (this.radius * pixelScale) >= width) {
             this.velocity.mult(-0.5, 1);
-            this.position.x = width - (this.r * pixelScale) - 1;
+            this.position.x = width - (this.radius * pixelScale) - 1;
         }
-        if (this.position.x - (this.r * pixelScale) <= 0) {
+        if (this.position.x - (this.radius * pixelScale) <= 0) {
             this.velocity.mult(-0.5, 1);
-            this.position.x = (this.r * pixelScale) + 1;
+            this.position.x = (this.radius * pixelScale) + 1;
         }
-        if (this.position.y - (this.r * pixelScale) <= 0) {
+        if (this.position.y - (this.radius * pixelScale) <= 0) {
             this.velocity.mult(1, -0.5);
-            this.position.y = (this.r * pixelScale) + 1;
+            this.position.y = (this.radius * pixelScale) + 1;
         }
     }
 }
@@ -114,7 +118,7 @@ function resolveCollision (a, b) {
     let nx = dx / dist;
     let ny = dy / dist;
 
-    // push particles apart
+    // push objects apart
     let overlap = minDist - dist;
 
     a.x -= nx * overlap / 2;
@@ -153,7 +157,7 @@ function resolveCollision (a, b) {
 function collisionCheck (a, b) {
     let difference = b.position.copy().sub(a.position.copy());
     let distance = difference.mag();
-    let collisionDistance = (a.r * pixelScale) + (b.r * pixelScale);
+    let collisionDistance = (a.radius * pixelScale) + (b.radius * pixelScale);
     let overlap = (collisionDistance - distance);
     if (overlap >= 0) {
         // we need to conserve momentum and energy
@@ -174,10 +178,10 @@ function collisionCheck (a, b) {
         b.position.add(collisionNormal.copy().mult(overlap / 2));
         // add impulse
         if (normalDot >= 0 ) return;
-        let impulseMag = -normalDot / (1 / a.m + 1 / b.m);
+        let impulseMag = -normalDot / (1 / a.mass + 1 / b.mass);
         let impulse = collisionNormal.copy().mult(impulseMag);
-        a.velocity.sub(impulse.copy().div(a.m));
-        b.velocity.add(impulse.copy().div(b.m));
+        a.velocity.sub(impulse.copy().div(a.mass));
+        b.velocity.add(impulse.copy().div(b.mass));
     }
 }
 
@@ -193,19 +197,15 @@ function draw () {
     }
     let dt = timeScale * deltaTime / 1000
     if (pause) {
-        noStroke();
-        fill(0,0,0);
-        textSize(96)
-        text("Paused", width / 2, height / 2);
         dt = 0;
     }
     textSize(12);
-    particles.forEach((i) => {
+    objects.forEach((i) => {
         noStroke();
         fill(materials[i.material].color);
-        circle(i.position.x, i.position.y, i.r * pixelScale * 2);
+        circle(i.position.x, i.position.y, i.radius * pixelScale * 2);
         fill(materials[i.material].contrastColor);
-        text(Math.floor(i.m).toFixed() + " kg", i.position.x, i.position.y);
+        text(Math.floor(i.mass).toFixed() + " kg", i.position.x, i.position.y);
         if (i.mouseGrab) {
             stroke(0,0,0);
             strokeWeight(1);
@@ -214,9 +214,9 @@ function draw () {
         i.tick(dt);
         i.wallCollisions();
     });
-    for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-            collisionCheck(particles[i], particles[j]);
+    for (let i = 0; i < objects.length; i++) {
+        for (let j = i + 1; j < objects.length; j++) {
+            collisionCheck(objects[i], objects[j]);
         }
     }
     noStroke();
@@ -224,27 +224,40 @@ function draw () {
     circle(mouseX, mouseY, placementRadius * pixelScale * 2);
     fill(0,0,1);
     //text(Math.floor(placementRadius), mouseX, mouseY);
+    if (pause) {
+        noStroke();
+        fill(0,0,0);
+        textSize(96)
+        text("Paused", width / 2, height / 2);
+    }
+    dataDiv.innerHTML = `
+        Data:<br/>
+        Particle count: ${objects.length}<br/>
+        Pixels per metre: ${pixelScale}<br/>
+        Object depth: ${depth} metres<br/>
+        Current placement radius: ${Math.round(placementRadius * 10) / 10} metres<br/>
+    `
 }
 
 function mousePressed () {
     if (document.activeElement.id === "material") return;
     if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
-        particles.push(new circleParticle(mouseX, mouseY, placementRadius, placementMaterial));
+        objects.push(new circleParticle(mouseX, mouseY, placementRadius, placementMaterial));
     }
     else if (mouseButton === CENTER) {
-        particles.forEach((i) => {
-            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= (i.r * pixelScale)) {
-                particles = particles.filter((particle) => {
+        objects.forEach((i) => {
+            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= (i.radius * pixelScale)) {
+                objects = objects.filter((particle) => {
                     return particle.uuid !== i.uuid;
                 })
             }
         })
     }
     else if (mouseButton === RIGHT) {
-        particles.forEach((i) => {
+        objects.forEach((i) => {
             let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-            if (diff.mag() <= 100 + (i.r * pixelScale)) {
+            if (diff.mag() <= (i.radius * pixelScale)) {
                 i.mouseGrab = true;
             }
         })
@@ -264,7 +277,7 @@ function keyPressed () {
 }
 
 function mouseReleased () {
-    particles.forEach((i) => {
+    objects.forEach((i) => {
         i.mouseGrab = false;
     })
 }

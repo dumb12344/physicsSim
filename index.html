@@ -9,11 +9,12 @@
 
   </head>
   <body>
+    <noscript>Please enable javascript to run this application</noscript>
     <main>
     </main>
-    <div style="display: flex; flex-direction: row;">
-      <div style="font-size: 14px; display: inline">
-        Controls:
+    <div id="infoDiv">
+      <div>
+        Controls:<hr/>
         Left click to spawn particle</br>
         Scroll or arrow keys to change radius of particle</br>
         Shift + Scroll or arrow keys to change mass of particle</br>
@@ -21,7 +22,7 @@
         Middle click to remove particle</br>
         Space to toggle pause</br>
       </div>
-      <div style="font-size: 14px; display: inline">
+      <div>
         Each grid space is 1 square metre<br/>
         <label>Material: </label>
         <select id="material">
@@ -30,6 +31,7 @@
           <option value="steel">Steel</option>
         </select>
       </div>
+      <div id="data"></div>
     </div>
     <script src="sketch.js"></script>
   </body>
