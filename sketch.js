@@ -8,6 +8,7 @@ window.onblur = () => pause = true;
 let placementRadius = 0.5;
 let placementMaterial = "wood";
 let placementObject = "cylinder";
+document.getElementById("placementRadius").value = 0.5;
 document.getElementById("material").value = "wood";
 document.getElementById("object").value = "cylinder";
 let materials = {};
@@ -15,7 +16,7 @@ let dataDiv = document.getElementById("data");
 // 1 cm depth
 let depth = 0.01;
 // TODO: fix collisions
-// also finish streaks and make input element for radius
+// also finish streaks
 class baseObject {
     constructor (x, y, volume = 1, material = "wood") {
         this.position = createVector(x, y);
@@ -278,7 +279,6 @@ function draw () {
         Particle count: ${objects.length}<br/>
         Pixels per metre: ${pixelScale}<br/>
         Object depth: ${depth} metres<br/>
-        Current placement radius: ${Math.round(placementRadius * 10) / 10} metres<br/>
     `
 }
 
@@ -327,10 +327,14 @@ function mousePressed () {
 function mouseWheel (event) {
     placementRadius -= event.deltaY / 800;
     placementRadius = abs(placementRadius);
+    document.getElementById("placementRadius").value = placementRadius;
 }
 
 function keyPressed () {
-    placementRadius += 0.22 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
+    if (key === "ArrowUp" || key === "ArrowDown") {
+        placementRadius += 0.22 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
+        document.getElementById("placementRadius").value = placementRadius;
+    }
     if (key === " ") {
         pause = !pause;
     }
@@ -348,4 +352,8 @@ document.getElementById("material").addEventListener("change", () => {
 
 document.getElementById("object").addEventListener("change", () => {
     placementObject = document.getElementById("object").value;
+})
+
+document.getElementById("placementRadius").addEventListener("change", () => {
+    placementRadius = parseFloat(document.getElementById("placementRadius").value);
 })
