@@ -3,24 +3,28 @@ let objects = [];
 const pixelScale = 200;
 const timeScale = 4;
 const bounceEnergyLoss = 0.8;
-let placementRadius = 0.5;
 let pause = false;
 window.onblur = () => pause = true;
+let placementRadius = 0.5;
 let placementMaterial = "wood";
+let placementObject = "cylinder";
 document.getElementById("material").value = "wood";
+document.getElementById("object").value = "cylinder";
 let materials = {};
 let dataDiv = document.getElementById("data");
+// 1 cm depth
 let depth = 0.01;
-// TODO: implement basic object class to extend
-// also fix collisions
-class circleParticle {
-    constructor (x, y, radius = 1, material = "wood") {
+// TODO: fix collisions
+// also finish streaks and make input element for radius
+class baseObject {
+    constructor (x, y, volume = 1, material = "wood") {
+        this.position = createVector(x, y);
+        this.velocity = createVector(0, 0);
+        this.acceleration = createVector(0, 0);
+        this.uuid = self.crypto.randomUUID();
+        this.volume = volume;
         this.material = material;
-        this.radius = radius;
-        this.area = Math.PI * (this.radius ** 2);
-        // kg/m^3 -> kg/m^2 for 2d
-        // 1 cm depth
-        this.mass = (this.area * depth) * materials[this.material].density;
+        this.mass = volume * materials[material].density;
         this.forces = {
             gravity: function (ref) {
                 return createVector(0, -9.8 * ref.mass);
@@ -29,9 +33,9 @@ class circleParticle {
                 if (!ref.mouseGrab) {
                     return createVector(0);
                 }
-                let diff = ref.position.copy().sub(createVector(mouseX, mouseY));
+                let diff = ref.position.copy().sub(createVector(mouseX, mouseY)).mult(-3, 3);
                 // spring constant 3
-                return diff.mult(-3, 3);
+                return diff;
             },
             mouseSpringDampening: function (ref) {
                 if (!ref.mouseGrab) {
@@ -41,10 +45,6 @@ class circleParticle {
             }
         };
         this.mouseGrab = false;
-        this.uuid = self.crypto.randomUUID();
-        this.position = createVector(x, y);
-        this.velocity = createVector(0, 0);
-        this.acceleration = createVector(0, 0);
     }
 
     tick (dt) {
@@ -60,20 +60,52 @@ class circleParticle {
     }
 
     wallCollisions () {
+        if (this.position.y >= height) {
+            this.velocity.mult(1, -bounceEnergyLoss);
+            this.position.y = height - 1;
+        }
+        if (this.position.x >= width) {
+            this.velocity.mult(-bounceEnergyLoss, 1);
+            this.position.x = width - 1;
+        }
+        if (this.position.x <= 0) {
+            this.velocity.mult(-bounceEnergyLoss, 1);
+            this.position.x = 1;
+        }
+        if (this.position.y <= 0) {
+            this.velocity.mult(1, -bounceEnergyLoss);
+            this.position.y = 1;
+        }
+    }
+}
+
+class particleObject extends baseObject {
+    constructor(x, y) {
+        super(x, y, 0.01);
+    }
+}
+
+class cylinderObject extends baseObject {
+    constructor (x, y, radius = 1, material = "wood") {
+        super(x, y, Math.PI * (radius ** 2) * depth, material);
+        this.radius = radius;
+    }
+
+    wallCollisions () {
         if (this.position.y + (this.radius * pixelScale) >= height) {
-            this.velocity.mult(1, -0.5);
+            this.velocity.mult(1, -bounceEnergyLoss);
             this.position.y = height - (this.radius * pixelScale) - 1;
         }
         if (this.position.x + (this.radius * pixelScale) >= width) {
-            this.velocity.mult(-0.5, 1);
+            this.velocity.mult(-bounceEnergyLoss, 1);
             this.position.x = width - (this.radius * pixelScale) - 1;
         }
         if (this.position.x - (this.radius * pixelScale) <= 0) {
-            this.velocity.mult(-0.5, 1);
+            this.velocity.mult(-bounceEnergyLoss, 1);
             this.position.x = (this.radius * pixelScale) + 1;
         }
         if (this.position.y - (this.radius * pixelScale) <= 0) {
-            this.velocity.mult(1, -0.5);
+            this.velocity.mult(1, -bounceEnergyLoss);
             this.position.y = (this.radius * pixelScale) + 1;
         }
     }
@@ -155,6 +187,7 @@ function resolveCollision (a, b) {
 }
 
 function collisionCheck (a, b) {
+    if (!(a instanceof cylinderObject) || !(b instanceof cylinderObject)) return;
     let difference = b.position.copy().sub(a.position.copy());
     let distance = difference.mag();
     let collisionDistance = (a.radius * pixelScale) + (b.radius * pixelScale);
@@ -186,7 +219,9 @@ function collisionCheck (a, b) {
 }
 
 function draw () {
-    background(220/255);
+    let streaks = false;
+    background(0, 0, 220/255, streaks ? 0.1 : 1);
+    // draw grid
     for (let i = 0; i <= width / pixelScale; i++) {
         for (let j = 0; j <= height / pixelScale; j++) {
             stroke(0,0,0);
@@ -203,9 +238,15 @@ function draw () {
     objects.forEach((i) => {
         noStroke();
         fill(materials[i.material].color);
-        circle(i.position.x, i.position.y, i.radius * pixelScale * 2);
-        fill(materials[i.material].contrastColor);
-        text(Math.floor(i.mass).toFixed() + " kg", i.position.x, i.position.y);
+        if (i instanceof cylinderObject) {
+            circle(i.position.x, i.position.y, i.radius * pixelScale * 2);
+            fill(materials[i.material].contrastColor);
+            text(Math.floor(i.mass).toFixed() + " kg", i.position.x, i.position.y);
+        }
+        if (i instanceof particleObject) {
+            fill(0, 0, 0);
+            circle(i.position.x, i.position.y, 10);
+        }
         if (i.mouseGrab) {
             stroke(0,0,0);
             strokeWeight(1);
@@ -219,10 +260,12 @@ function draw () {
             collisionCheck(objects[i], objects[j]);
         }
     }
-    noStroke();
-    fill(0,0,0,0.5)
-    circle(mouseX, mouseY, placementRadius * pixelScale * 2);
-    fill(0,0,1);
+    if (placementObject == "cylinder") {
+        noStroke();
+        fill(0,0,0,0.5)
+        circle(mouseX, mouseY, placementRadius * pixelScale * 2);
+    }
+    //fill(0,0,1);
     //text(Math.floor(placementRadius), mouseX, mouseY);
     if (pause) {
         noStroke();
@@ -240,10 +283,19 @@ function draw () {
 }
 
 function mousePressed () {
-    if (document.activeElement.id === "material") return;
+    if (document.activeElement.id === "material" || document.activeElement.id === "object") return;
     if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
-        objects.push(new circleParticle(mouseX, mouseY, placementRadius, placementMaterial));
+        let newObject;
+        switch (placementObject) {
+            default:
+                newObject = new particleObject(mouseX, mouseY);
+                break;
+            case "cylinder":
+                newObject = new cylinderObject(mouseX, mouseY, placementRadius, placementMaterial);
+                break;
+        }
+        objects.push(newObject);
     }
     else if (mouseButton === CENTER) {
         objects.forEach((i) => {
@@ -256,9 +308,17 @@ function mousePressed () {
     }
     else if (mouseButton === RIGHT) {
         objects.forEach((i) => {
-            let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-            if (diff.mag() <= (i.radius * pixelScale)) {
-                i.mouseGrab = true;
+            if (i instanceof cylinderObject) {
+                let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+                if (diff.mag() <= (i.radius * pixelScale)) {
+                    i.mouseGrab = true;
+                }
+            }
+            if (i instanceof particleObject) {
+                let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+                if (diff.mag() <= 100) {
+                    i.mouseGrab = true;
+                }
             }
         })
     }
@@ -284,4 +344,8 @@ function mouseReleased () {
 
 document.getElementById("material").addEventListener("change", () => {
     placementMaterial = document.getElementById("material").value;
+})
+
+document.getElementById("object").addEventListener("change", () => {
+    placementObject = document.getElementById("object").value;
 })
