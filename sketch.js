@@ -2,17 +2,18 @@
 let objects = [];
 const pixelScale = 200;
 const timeScale = 4;
-const bounceEnergyLoss = 0.8;
+const restitution = 0.8;
 let pause = false;
 window.onblur = () => pause = true;
 let placementRadius = 0.5;
 let placementMaterial = "wood";
 let placementObject = "cylinder";
+let mode = "place";
 document.getElementById("placementRadius").value = 0.5;
 document.getElementById("material").value = "wood";
 document.getElementById("object").value = "cylinder";
+document.getElementById("mode").value = "place";
 let materials = {};
-let dataDiv = document.getElementById("data");
 // 1 cm depth
 let depth = 0.01;
 // TODO: fix collisions
@@ -46,6 +47,7 @@ class baseObject {
             }
         };
         this.mouseGrab = false;
+        this.selected = false;
     }
 
     tick (dt) {
@@ -62,19 +64,19 @@ class baseObject {
 
     wallCollisions () {
         if (this.position.y >= height) {
-            this.velocity.mult(1, -bounceEnergyLoss);
+            this.velocity.mult(1, -restitution);
             this.position.y = height - 1;
         }
         if (this.position.x >= width) {
-            this.velocity.mult(-bounceEnergyLoss, 1);
+            this.velocity.mult(-restitution, 1);
             this.position.x = width - 1;
         }
         if (this.position.x <= 0) {
-            this.velocity.mult(-bounceEnergyLoss, 1);
+            this.velocity.mult(-restitution, 1);
             this.position.x = 1;
         }
         if (this.position.y <= 0) {
-            this.velocity.mult(1, -bounceEnergyLoss);
+            this.velocity.mult(1, -restitution);
             this.position.y = 1;
         }
     }
@@ -94,19 +96,19 @@ class cylinderObject extends baseObject {
 
     wallCollisions () {
         if (this.position.y + (this.radius * pixelScale) >= height) {
-            this.velocity.mult(1, -bounceEnergyLoss);
+            this.velocity.mult(1, -restitution);
             this.position.y = height - (this.radius * pixelScale) - 1;
         }
         if (this.position.x + (this.radius * pixelScale) >= width) {
-            this.velocity.mult(-bounceEnergyLoss, 1);
+            this.velocity.mult(-restitution, 1);
             this.position.x = width - (this.radius * pixelScale) - 1;
         }
         if (this.position.x - (this.radius * pixelScale) <= 0) {
-            this.velocity.mult(-bounceEnergyLoss, 1);
+            this.velocity.mult(-restitution, 1);
             this.position.x = (this.radius * pixelScale) + 1;
         }
         if (this.position.y - (this.radius * pixelScale) <= 0) {
-            this.velocity.mult(1, -bounceEnergyLoss);
+            this.velocity.mult(1, -restitution);
             this.position.y = (this.radius * pixelScale) + 1;
         }
     }
@@ -171,7 +173,7 @@ function resolveCollision (a, b) {
     if (velAlongNormal > 0) return;
 
     // bounce
-    let restitution = bounceEnergyLoss;
+    let restitution = restitution;
 
     let impulse =
         -(1 + restitution) * velAlongNormal /
@@ -215,7 +217,9 @@ function collisionCheck (a, b) {
         let impulseMag = -normalDot / (1 / a.mass + 1 / b.mass);
         let impulse = collisionNormal.copy().mult(impulseMag);
         a.velocity.sub(impulse.copy().div(a.mass));
+        a.velocity.mult(restitution);
         b.velocity.add(impulse.copy().div(b.mass));
+        b.velocity.mult(restitution);
     }
 }
 
@@ -236,17 +240,21 @@ function draw () {
         dt = 0;
     }
     textSize(12);
-    objects.forEach((i) => {
-        noStroke();
+    objects.forEach(i => {
+        strokeWeight(5);
+        if (i.selected) stroke(0.3, 1, 1);
+        else noStroke();
         fill(materials[i.material].color);
         if (i instanceof cylinderObject) {
             circle(i.position.x, i.position.y, i.radius * pixelScale * 2);
             fill(materials[i.material].contrastColor);
+            noStroke();
             text(Math.floor(i.mass).toFixed() + " kg", i.position.x, i.position.y);
         }
         if (i instanceof particleObject) {
             fill(0, 0, 0);
             circle(i.position.x, i.position.y, 10);
+            noStroke();
         }
         if (i.mouseGrab) {
             stroke(0,0,0);
@@ -261,7 +269,7 @@ function draw () {
             collisionCheck(objects[i], objects[j]);
         }
     }
-    if (placementObject == "cylinder") {
+    if (placementObject == "cylinder" && mode == "place") {
         noStroke();
         fill(0,0,0,0.5)
         circle(mouseX, mouseY, placementRadius * pixelScale * 2);
@@ -274,40 +282,104 @@ function draw () {
         textSize(96)
         text("Paused", width / 2, height / 2);
     }
-    dataDiv.innerHTML = `
+    data.innerHTML = `
         Data:<br/>
         Particle count: ${objects.length}<br/>
         Pixels per metre: ${pixelScale}<br/>
         Object depth: ${depth} metres<br/>
-    `
+        Canvas width: ${width}<br/>
+        Canvas height: ${height}<br/>
+        Coefficient of restitution: ${restitution}<br/>
+    `;
+    let selectedCount = 0;
+    let objectDisplay = [];
+    objects.forEach(i => {
+        if (i.selected) {
+            selectedCount++;
+            objectDisplay.push(`
+                <div>
+                    Object ${i.uuid}<br/>
+                    Position (cm) (pixels): (${Math.round(i.position.x)}, ${Math.round(i.position.y)})<br/>
+                    Velocity (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})<br/>
+                    Acceleration (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})
+                </div>
+            `)
+        }
+    });
+    objectInfo.innerHTML = `
+        <span>Selected object${selectedCount == 1 ? "" : "s"}:</span>
+        <div id="objectInfoFlex">
+        ${objectDisplay.join("")}
+        </div>
+    `;
 }
 
 function mousePressed () {
     if (document.activeElement.id === "material" || document.activeElement.id === "object") return;
     if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
-        let newObject;
-        switch (placementObject) {
-            default:
-                newObject = new particleObject(mouseX, mouseY);
+        switch (mode) {
+            case "place":
+                let newObject;
+                switch (placementObject) {
+                    default:
+                        newObject = new particleObject(mouseX, mouseY);
+                        break;
+                    case "cylinder":
+                        newObject = new cylinderObject(mouseX, mouseY, placementRadius, placementMaterial);
+                        break;
+                }
+                objects.push(newObject);
                 break;
-            case "cylinder":
-                newObject = new cylinderObject(mouseX, mouseY, placementRadius, placementMaterial);
+            case "select":
+                let objectSelected = false;
+                objects.forEach(i => {
+                    if (i instanceof cylinderObject) {
+                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+                        if (diff.mag() <= (i.radius * pixelScale)) {
+                            i.selected = !i.selected;
+                            objectSelected = true;
+                        }
+                    }
+                    if (i instanceof particleObject) {
+                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+                        if (diff.mag() <= 100) {
+                            i.selected = !i.selected;
+                            objectSelected = true;
+                        }
+                    }
+                })
+                if (objectSelected == false) {
+                    objects.forEach(i => {
+                        i.selected = false;
+                    });
+                }
+                break;
+            case "delete":
+                objects.forEach(i => {
+                    if (i instanceof cylinderObject) {
+                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+                        if (diff.mag() <= (i.radius * pixelScale)) {
+                            objects = objects.filter((object) => {
+                                return object.uuid !== i.uuid;
+                            });
+                        }
+                    }
+                    if (i instanceof particleObject) {
+                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
+                        if (diff.mag() <= 100) {
+                            objects = objects.filter((object) => {
+                                return object.uuid !== i.uuid;
+                            })
+                        }
+                    }
+                })
                 break;
         }
-        objects.push(newObject);
-    }
-    else if (mouseButton === CENTER) {
-        objects.forEach((i) => {
-            if (i.position.copy().dist(createVector(mouseX, mouseY)) <= (i.radius * pixelScale)) {
-                objects = objects.filter((object) => {
-                    return object.uuid !== i.uuid;
-                })
-            }
-        })
+        
     }
     else if (mouseButton === RIGHT) {
-        objects.forEach((i) => {
+        objects.forEach(i => {
             if (i instanceof cylinderObject) {
                 let diff = i.position.copy().sub(createVector(mouseX, mouseY));
                 if (diff.mag() <= (i.radius * pixelScale)) {
@@ -325,23 +397,37 @@ function mousePressed () {
 }
 
 function mouseWheel (event) {
-    placementRadius -= event.deltaY / 800;
-    placementRadius = abs(placementRadius);
-    document.getElementById("placementRadius").value = placementRadius;
+    if (mode == "place") {
+        placementRadius -= event.deltaY / 800;
+        placementRadius = abs(placementRadius);
+        document.getElementById("placementRadius").value = placementRadius;
+    }
 }
 
 function keyPressed () {
-    if (key === "ArrowUp" || key === "ArrowDown") {
+    if ((key === "ArrowUp" || key === "ArrowDown") && mode == "place") {
         placementRadius += 0.22 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
         document.getElementById("placementRadius").value = placementRadius;
     }
     if (key === " ") {
         pause = !pause;
     }
+    if (key == "1") {
+        mode = "place";
+        document.getElementById("mode").value = mode;
+    }
+    if (key == "2") {
+        mode = "select";
+        document.getElementById("mode").value = mode;
+    }
+    if (key == "3") {
+        mode = "delete";
+        document.getElementById("mode").value = mode;
+    }
 }
 
 function mouseReleased () {
-    objects.forEach((i) => {
+    objects.forEach(i => {
         i.mouseGrab = false;
     })
 }
@@ -356,4 +442,8 @@ document.getElementById("object").addEventListener("change", () => {
 
 document.getElementById("placementRadius").addEventListener("change", () => {
     placementRadius = parseFloat(document.getElementById("placementRadius").value);
+})
+
+document.getElementById("mode").addEventListener("change", () => {
+    mode = document.getElementById("mode").value;
 })

@@ -15,12 +15,11 @@
     <div id="infoDiv">
       <div>
         Controls:<hr/>
-        Left click to spawn object</br>
-        Scroll or arrow keys to change radius of object</br>
-        Shift + Scroll or arrow keys to change mass of object</br>
-        Hold Right click to add a spring force betweeen an object and the cursor</br>
-        Middle click to remove object</br>
-        Space to toggle pause</br>
+        Left click to place / edit / delete object<br/>
+        Scroll or arrow keys to change radius of object<br/>
+        Hold Right click to add a spring force betweeen an object and the cursor<br/>
+        Space to toggle pause<br/>
+        1 - 3 to switch modes<br/>
       </div>
       <div>
         Each grid space is 1 square metre<br/>
@@ -39,8 +38,16 @@
         <br/>
         <label>Placement radius: </label>
         <input id="placementRadius" value="0.5" type="number"> metres
+        <br/>
+        <label>Mode: </label>
+        <select id="mode">
+          <option value="place" selected>Place</option>
+          <option value="select">Select</option>
+          <option value="delete">Delete</option>
+        </select>
       </div>
       <div id="data"></div>
+      <div id="objectInfo"></div>
     </div>
     <script src="sketch.js"></script>
   </body>

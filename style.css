@@ -9,6 +9,19 @@ canvas {
   display: flex;
   flex-direction: row;
   gap: 10px;
+  text-wrap: 0;
+  white-space: nowrap;
+}
+#objectInfoFlex {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  overflow-wrap: 0;
+}
+#objectInfoFlex > * {
+  width: 250px;
 }
 #infoDiv > * {
   font-size: 11px;
@@ -25,5 +38,11 @@ canvas {
   height: 20px;
 }
 #placementRadius {
-  width: 40px
+  font-size: 11px;
+  width: 40px;
+  height: 20px;
+}
+#mode {
+  font-size: 11px;
+  height: 20px;
 }
