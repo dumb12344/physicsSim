@@ -315,7 +315,7 @@ function draw () {
 }
 
 function mousePressed () {
-    if (document.activeElement.id === "material" || document.activeElement.id === "object") return;
+    if (document.activeElement.id === "material" || document.activeElement.id === "object" || document.activeElement.id === "mode") return;
     if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
         switch (mode) {
