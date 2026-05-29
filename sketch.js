@@ -51,11 +51,13 @@ class baseObject {
     }
 
     tick (dt) {
-        this.acceleration.mult(0);
-        Object.entries(this.forces).map((entry) => {
-            let getForce = entry[1];
-            this.acceleration.add(getForce(this).div(this.mass).mult(dt));
-        })
+        if (dt !== 0) {
+            this.acceleration.mult(0);
+            Object.entries(this.forces).map((entry) => {
+                let getForce = entry[1];
+                this.acceleration.add(getForce(this).div(this.mass).mult(dt));
+            });
+        }
         this.velocity.add(this.acceleration.copy().mult(dt));
         // invert because JS canvas is weird
         // scale because pixels are small
@@ -261,6 +263,16 @@ function draw () {
             strokeWeight(1);
             line(i.position.x, i.position.y, mouseX, mouseY);
         }
+        if (i.selected) {
+            stroke(0,1,1);
+            strokeWeight(1);
+            line(i.position.x, i.position.y, i.position.x + (i.velocity.x * pixelScale), i.position.y + (i.velocity.y * pixelScale));
+        }
+        if (i.selected) {
+            stroke(0.7,1,1);
+            strokeWeight(1);
+            line(i.position.x, i.position.y, i.position.x + (i.acceleration.x * pixelScale), i.position.y + (i.acceleration.y * pixelScale));
+        }
         i.tick(dt);
         i.wallCollisions();
     });
@@ -300,8 +312,8 @@ function draw () {
                 <div>
                     Object ${i.uuid}<br/>
                     Position (cm) (pixels): (${Math.round(i.position.x)}, ${Math.round(i.position.y)})<br/>
-                    Velocity (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})<br/>
-                    Acceleration (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})
+                    <span style="color: red;">Velocity (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})</span><br/>
+                    <span style="color: blue;">Acceleration (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})</span>
                 </div>
             `)
         }
