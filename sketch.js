@@ -2,7 +2,14 @@
 let objects = [];
 const pixelScale = 200;
 const timeScale = 4;
-const restitution = 0.8;
+const inputting = () => {
+    return (
+        document.activeElement.id === "material"
+        || document.activeElement.id === "object"
+        || document.activeElement.id === "mode"
+        || document.activeElement.id === "accelGravity"
+    );
+}
 let pause = false;
 window.onblur = () => pause = true;
 let placementRadius = 0.5;
@@ -16,6 +23,10 @@ document.getElementById("mode").value = "place";
 let materials = {};
 // 1 cm depth
 let depth = 0.01;
+let restitution = 0.8;
+let gravityAccel = 9.81;
+document.getElementById("restitutionCoeff").value = 80;
+document.getElementById("accelGravity").value = 9.81;
 // TODO: fix collisions
 // also finish streaks
 class baseObject {
@@ -29,7 +40,7 @@ class baseObject {
         this.mass = volume * materials[material].density;
         this.forces = {
             gravity: function (ref) {
-                return createVector(0, -9.8 * ref.mass);
+                return createVector(0, -gravityAccel * ref.mass);
             },
             mouseSpring: function (ref) {
                 if (!ref.mouseGrab) {
@@ -266,12 +277,12 @@ function draw () {
         if (i.selected) {
             stroke(0,1,1);
             strokeWeight(1);
-            line(i.position.x, i.position.y, i.position.x + (i.velocity.x * pixelScale), i.position.y + (i.velocity.y * pixelScale));
+            line(i.position.x, i.position.y, i.position.x + (i.velocity.x * pixelScale), i.position.y - (i.velocity.y * pixelScale));
         }
         if (i.selected) {
             stroke(0.7,1,1);
             strokeWeight(1);
-            line(i.position.x, i.position.y, i.position.x + (i.acceleration.x * pixelScale), i.position.y + (i.acceleration.y * pixelScale));
+            line(i.position.x, i.position.y, i.position.x + (i.acceleration.x * pixelScale), i.position.y - (i.acceleration.y * pixelScale));
         }
         i.tick(dt);
         i.wallCollisions();
@@ -301,7 +312,6 @@ function draw () {
         Object depth: ${depth} metres<br/>
         Canvas width: ${width}<br/>
         Canvas height: ${height}<br/>
-        Coefficient of restitution: ${restitution}<br/>
     `;
     let selectedCount = 0;
     let objectDisplay = [];
@@ -311,9 +321,12 @@ function draw () {
             objectDisplay.push(`
                 <div>
                     Object ${i.uuid}<br/>
-                    Position (cm) (pixels): (${Math.round(i.position.x)}, ${Math.round(i.position.y)})<br/>
-                    <span style="color: red;">Velocity (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})</span><br/>
-                    <span style="color: blue;">Acceleration (cm) (metres per second): (${Math.round(i.velocity.x * 10) / 10}, ${Math.round(i.velocity.y * 10) / 10})</span>
+                    Mass (cm): ${Math.floor(i.mass * 10) / 10} kilograms<br/>
+                    ${i instanceof cylinderObject ? `Radius (cm): ${Math.floor(i.radius * 10) / 10} metres<br/>` : ``}
+                    ${i instanceof cylinderObject ? `Material: ${i.material}0<br/>` : ``}
+                    Position (cm) (pixels): (${Math.floor(i.position.x)}, ${Math.floor(i.position.y)})<br/>
+                    <span style="color: red;">Velocity (cm) (metres per second): (${Math.floor(i.velocity.x * 10) / 10}, ${Math.floor(i.velocity.y * 10) / 10})</span><br/>
+                    <span style="color: blue;">Acceleration (cm) (metres per second): (${Math.floor(i.acceleration.x * 10) / 10}, ${Math.floor(i.acceleration.y * 10) / 10})</span>
                 </div>
             `)
         }
@@ -327,7 +340,7 @@ function draw () {
 }
 
 function mousePressed () {
-    if (document.activeElement.id === "material" || document.activeElement.id === "object" || document.activeElement.id === "mode") return;
+    if (inputting()) return;
     if (mouseX > width || mouseY > height || mouseX < 0 || mouseY < 0) return;
     if (mouseButton === LEFT) {
         switch (mode) {
@@ -417,6 +430,7 @@ function mouseWheel (event) {
 }
 
 function keyPressed () {
+    if (inputting()) return;
     if ((key === "ArrowUp" || key === "ArrowDown") && mode == "place") {
         placementRadius += 0.22 * ((key === "ArrowUp" ? 1 : 0) + (key === "ArrowDown" ? -1 : 0));
         document.getElementById("placementRadius").value = placementRadius;
@@ -454,6 +468,14 @@ document.getElementById("object").addEventListener("change", () => {
 
 document.getElementById("placementRadius").addEventListener("change", () => {
     placementRadius = parseFloat(document.getElementById("placementRadius").value);
+})
+
+document.getElementById("accelGravity").addEventListener("change", () => {
+    gravityAccel = parseFloat(document.getElementById("accelGravity").value);
+})
+
+document.getElementById("restitutionCoeff").addEventListener("change", () => {
+    restitution = parseFloat(document.getElementById("restitutionCoeff").value) / 100;
 })
 
 document.getElementById("mode").addEventListener("change", () => {
