@@ -1,4 +1,9 @@
 "use strict";
+p5.Vector.prototype.subtract = p5.Vector.prototype.sub;
+p5.Vector.prototype.multiply = p5.Vector.prototype.mult;
+p5.Vector.prototype.divide = p5.Vector.prototype.div;
+p5.Vector.prototype.magnitude = p5.Vector.prototype.mag;
+p5.Vector.prototype.difference = p5.Vector.prototype.diff;
 let objects = [];
 const pixelScale = 200;
 const timeScale = 4;
@@ -46,15 +51,15 @@ class baseObject {
                 if (!ref.mouseGrab) {
                     return createVector(0);
                 }
-                let diff = ref.position.copy().sub(createVector(mouseX, mouseY)).mult(-3, 3);
+                let difference = ref.position.copy().subtract(createVector(mouseX, mouseY)).multiply(-3, 3);
                 // spring constant 3
-                return diff;
+                return difference;
             },
             mouseSpringDampening: function (ref) {
                 if (!ref.mouseGrab) {
                     return createVector(0);
                 }
-                return ref.velocity.copy().mult(-30);
+                return ref.velocity.copy().multiply(-30);
             }
         };
         this.mouseGrab = false;
@@ -63,33 +68,33 @@ class baseObject {
 
     tick (dt) {
         if (dt !== 0) {
-            this.acceleration.mult(0);
+            this.acceleration.set(0);
             Object.entries(this.forces).map((entry) => {
                 let getForce = entry[1];
-                this.acceleration.add(getForce(this).div(this.mass).mult(dt));
+                this.acceleration.add(getForce(this).divide(this.mass).multiply(dt));
             });
         }
-        this.velocity.add(this.acceleration.copy().mult(dt));
+        this.velocity.add(this.acceleration.copy().multiply(dt));
         // invert because JS canvas is weird
         // scale because pixels are small
-        this.position.add(this.velocity.copy().mult(dt).mult(pixelScale, -pixelScale));
+        this.position.add(this.velocity.copy().multiply(dt).multiply(pixelScale, -pixelScale));
     }
 
     wallCollisions () {
         if (this.position.y >= height) {
-            this.velocity.mult(1, -restitution);
+            this.velocity.multiply(1, -restitution);
             this.position.y = height - 1;
         }
         if (this.position.x >= width) {
-            this.velocity.mult(-restitution, 1);
+            this.velocity.multiply(-restitution, 1);
             this.position.x = width - 1;
         }
         if (this.position.x <= 0) {
-            this.velocity.mult(-restitution, 1);
+            this.velocity.multiply(-restitution, 1);
             this.position.x = 1;
         }
         if (this.position.y <= 0) {
-            this.velocity.mult(1, -restitution);
+            this.velocity.multiply(1, -restitution);
             this.position.y = 1;
         }
     }
@@ -109,19 +114,19 @@ class cylinderObject extends baseObject {
 
     wallCollisions () {
         if (this.position.y + (this.radius * pixelScale) >= height) {
-            this.velocity.mult(1, -restitution);
+            this.velocity.multiply(1, -restitution);
             this.position.y = height - (this.radius * pixelScale) - 1;
         }
         if (this.position.x + (this.radius * pixelScale) >= width) {
-            this.velocity.mult(-restitution, 1);
+            this.velocity.multiply(-restitution, 1);
             this.position.x = width - (this.radius * pixelScale) - 1;
         }
         if (this.position.x - (this.radius * pixelScale) <= 0) {
-            this.velocity.mult(-restitution, 1);
+            this.velocity.multiply(-restitution, 1);
             this.position.x = (this.radius * pixelScale) + 1;
         }
         if (this.position.y - (this.radius * pixelScale) <= 0) {
-            this.velocity.mult(1, -restitution);
+            this.velocity.multiply(1, -restitution);
             this.position.y = (this.radius * pixelScale) + 1;
         }
     }
@@ -204,8 +209,8 @@ function resolveCollision (a, b) {
 
 function collisionCheck (a, b) {
     if (!(a instanceof cylinderObject) || !(b instanceof cylinderObject)) return;
-    let difference = b.position.copy().sub(a.position.copy());
-    let distance = difference.mag();
+    let difference = b.position.copy().subtract(a.position.copy());
+    let distance = difference.magnitude();
     let collisionDistance = (a.radius * pixelScale) + (b.radius * pixelScale);
     let overlap = (collisionDistance - distance);
     if (overlap >= 0) {
@@ -219,20 +224,20 @@ function collisionCheck (a, b) {
         // conservation of momentum: m_1i * v_1i + m_2i * v_2i = m_1f * v_1f + m_2f * v_2f
         // conservation of energy: m_1i * v_1i^2 + m_2i * v_2i^2 = m_1f * v_1f^2 + m_2f * v_2f^2
         //
-        let collisionNormal = difference.copy().div(distance);
-        let relativeVelocity = b.velocity.copy().sub(a.velocity.copy());
+        let collisionNormal = difference.copy().divide(distance);
+        let relativeVelocity = b.velocity.copy().subtract(a.velocity.copy());
         let normalDot = relativeVelocity.dot(collisionNormal);
         // seperate by overlap
-        a.position.sub(collisionNormal.copy().mult(overlap / 2));
-        b.position.add(collisionNormal.copy().mult(overlap / 2));
+        a.position.subtract(collisionNormal.copy().multiply(overlap / 2));
+        b.position.add(collisionNormal.copy().multiply(overlap / 2));
         // add impulse
         if (normalDot >= 0 ) return;
-        let impulseMag = -normalDot / (1 / a.mass + 1 / b.mass);
-        let impulse = collisionNormal.copy().mult(impulseMag);
-        a.velocity.sub(impulse.copy().div(a.mass));
-        a.velocity.mult(restitution);
-        b.velocity.add(impulse.copy().div(b.mass));
-        b.velocity.mult(restitution);
+        let impulseMagnitude = -normalDot / (1 / a.mass + 1 / b.mass);
+        let impulse = collisionNormal.copy().multiply(impulseMagnitude);
+        a.velocity.subtract(impulse.copy().divide(a.mass));
+        a.velocity.multiply(restitution);
+        b.velocity.add(impulse.copy().divide(b.mass));
+        b.velocity.multiply(restitution);
     }
 }
 
@@ -323,7 +328,7 @@ function draw () {
                     Object ${i.uuid}<br/>
                     Mass (cm): ${Math.floor(i.mass * 10) / 10} kilograms<br/>
                     ${i instanceof cylinderObject ? `Radius (cm): ${Math.floor(i.radius * 10) / 10} metres<br/>` : ``}
-                    ${i instanceof cylinderObject ? `Material: ${i.material}0<br/>` : ``}
+                    ${i instanceof cylinderObject ? `Material: ${i.material}<br/>` : ``}
                     Position (cm) (pixels): (${Math.floor(i.position.x)}, ${Math.floor(i.position.y)})<br/>
                     <span style="color: red;">Velocity (cm) (metres per second): (${Math.floor(i.velocity.x * 10) / 10}, ${Math.floor(i.velocity.y * 10) / 10})</span><br/>
                     <span style="color: blue;">Acceleration (cm) (metres per second): (${Math.floor(i.acceleration.x * 10) / 10}, ${Math.floor(i.acceleration.y * 10) / 10})</span>
@@ -360,15 +365,15 @@ function mousePressed () {
                 let objectSelected = false;
                 objects.forEach(i => {
                     if (i instanceof cylinderObject) {
-                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-                        if (diff.mag() <= (i.radius * pixelScale)) {
+                        let difference = i.position.copy().subtract(createVector(mouseX, mouseY));
+                        if (difference.magnitude() <= (i.radius * pixelScale)) {
                             i.selected = !i.selected;
                             objectSelected = true;
                         }
                     }
                     if (i instanceof particleObject) {
-                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-                        if (diff.mag() <= 100) {
+                        let difference = i.position.copy().subtract(createVector(mouseX, mouseY));
+                        if (difference.magnitude() <= 100) {
                             i.selected = !i.selected;
                             objectSelected = true;
                         }
@@ -383,16 +388,16 @@ function mousePressed () {
             case "delete":
                 objects.forEach(i => {
                     if (i instanceof cylinderObject) {
-                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-                        if (diff.mag() <= (i.radius * pixelScale)) {
+                        let difference = i.position.copy().subtract(createVector(mouseX, mouseY));
+                        if (difference.magnitude() <= (i.radius * pixelScale)) {
                             objects = objects.filter((object) => {
                                 return object.uuid !== i.uuid;
                             });
                         }
                     }
                     if (i instanceof particleObject) {
-                        let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-                        if (diff.mag() <= 100) {
+                        let difference = i.position.copy().subtract(createVector(mouseX, mouseY));
+                        if (difference.magnitude() <= 100) {
                             objects = objects.filter((object) => {
                                 return object.uuid !== i.uuid;
                             })
@@ -406,14 +411,14 @@ function mousePressed () {
     else if (mouseButton === RIGHT) {
         objects.forEach(i => {
             if (i instanceof cylinderObject) {
-                let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-                if (diff.mag() <= (i.radius * pixelScale)) {
+                let difference = i.position.copy().subtract(createVector(mouseX, mouseY));
+                if (difference.magnitude() <= (i.radius * pixelScale)) {
                     i.mouseGrab = true;
                 }
             }
             if (i instanceof particleObject) {
-                let diff = i.position.copy().sub(createVector(mouseX, mouseY));
-                if (diff.mag() <= 100) {
+                let difference = i.position.copy().subtract(createVector(mouseX, mouseY));
+                if (difference.magnitude() <= 100) {
                     i.mouseGrab = true;
                 }
             }
