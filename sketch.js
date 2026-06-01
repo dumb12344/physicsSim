@@ -6,7 +6,7 @@ p5.Vector.prototype.magnitude = p5.Vector.prototype.mag;
 p5.Vector.prototype.difference = p5.Vector.prototype.diff;
 let objects = [];
 const pixelScale = 200;
-const timeScale = 4;
+const timeScale = 1;
 const inputting = () => {
     return (
         document.activeElement.id === "material"
@@ -74,7 +74,7 @@ class baseObject {
             this.acceleration.set(0);
             Object.entries(this.forces).map((entry) => {
                 let getForce = entry[1];
-                this.acceleration.add(getForce(this).divide(this.mass).multiply(dt));
+                this.acceleration.add(getForce(this).divide(this.mass));
             });
         }
         this.velocity.add(this.acceleration.copy().multiply(dt));
@@ -340,7 +340,7 @@ function draw () {
                     Position (cm) (pixels): (${Math.floor(i.position.x)}, ${Math.floor(i.position.y)})<br/>
                     Kinetic energy (cm): ${Math.floor((i.mass * i.velocity.magnitude() ** 2) / 2 * 10) / 10} joules<br/>
                     <span style="color: red;">Velocity (cm) (metres per second): (${Math.floor(i.velocity.x * 10) / 10}, ${Math.floor(i.velocity.y * 10) / 10})</span><br/>
-                    <span style="color: blue;">Acceleration (cm) (metres per second): (${Math.floor(i.acceleration.x * 10) / 10}, ${Math.floor(i.acceleration.y * 10) / 10})</span>
+                    <span style="color: blue;">Acceleration (cm) (metres per second per second): (${Math.floor(i.acceleration.x * 10) / 10}, ${Math.floor(i.acceleration.y * 10) / 10})</span>
                 </div>
             `)
         }
