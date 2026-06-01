@@ -234,13 +234,18 @@ function collisionCheck (a, b) {
         a.position.subtract(collisionNormal.copy().multiply(overlap / 2));
         b.position.add(collisionNormal.copy().multiply(overlap / 2));
         // add impulse
-        if (normalDot >= 0 ) return;
+        /*if (normalDot >= 0 ) return;
         let impulseMagnitude = -normalDot / (1 / a.mass + 1 / b.mass);
         let impulse = collisionNormal.copy().multiply(impulseMagnitude);
         a.velocity.subtract(impulse.copy().divide(a.mass));
         a.velocity.multiply(restitution);
         b.velocity.add(impulse.copy().divide(b.mass));
         b.velocity.multiply(restitution);
+        */
+        let aVelocity = a.velocity.copy();
+        let bVelocity = b.velocity.copy();
+        a.velocity.set(bVelocity.multiply(b.mass).divide(a.mass).multiply(restitution));
+        b.velocity.set(aVelocity.multiply(a.mass).divide(b.mass).multiply(restitution));
     }
 }
 
