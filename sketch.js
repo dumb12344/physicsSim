@@ -13,6 +13,7 @@ const inputting = () => {
         || document.activeElement.id === "object"
         || document.activeElement.id === "mode"
         || document.activeElement.id === "accelGravity"
+        || document.activeElement.id === "dampening"
     );
 }
 let pause = false;
@@ -21,10 +22,12 @@ let placementRadius = 0.5;
 let placementMaterial = "wood";
 let placementObject = "cylinder";
 let mode = "place";
+let springDampening = 30;
 document.getElementById("placementRadius").value = 0.5;
 document.getElementById("material").value = "wood";
 document.getElementById("object").value = "cylinder";
 document.getElementById("mode").value = "place";
+document.getElementById("dampening").value = 30;
 let materials = {};
 // 1 cm depth
 let depth = 0.01;
@@ -59,7 +62,7 @@ class baseObject {
                 if (!ref.mouseGrab) {
                     return createVector(0);
                 }
-                return ref.velocity.copy().multiply(-30);
+                return ref.velocity.copy().multiply(-springDampening);
             }
         };
         this.mouseGrab = false;
@@ -311,8 +314,8 @@ function draw () {
         text("Paused", width / 2, height / 2);
     }
     data.innerHTML = `
-        Data:<br/>
-        Particle count: ${objects.length}<br/>
+        Data:<hr/>
+        Object count: ${objects.length}<br/>
         Pixels per metre: ${pixelScale}<br/>
         Object depth: ${depth} metres<br/>
         Canvas width: ${width}<br/>
@@ -325,7 +328,7 @@ function draw () {
             selectedCount++;
             objectDisplay.push(`
                 <div>
-                    Object ${i.uuid}<br/>
+                    Object ${i.uuid}<hr/>
                     Mass (cm): ${Math.floor(i.mass * 10) / 10} kilograms<br/>
                     ${i instanceof cylinderObject ? `Radius (cm): ${Math.floor(i.radius * 10) / 10} metres<br/>` : ``}
                     ${i instanceof cylinderObject ? `Material: ${i.material}<br/>` : ``}
@@ -473,6 +476,10 @@ document.getElementById("object").addEventListener("change", () => {
 
 document.getElementById("placementRadius").addEventListener("change", () => {
     placementRadius = parseFloat(document.getElementById("placementRadius").value);
+})
+
+document.getElementById("dampening").addEventListener("change", () => {
+    springDampening = parseFloat(document.getElementById("dampening").value);
 })
 
 document.getElementById("accelGravity").addEventListener("change", () => {

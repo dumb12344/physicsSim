@@ -25,25 +25,26 @@ canvas {
   width: 250px;
 }
 #infoDiv > * {
-  font-size: 11px;
+  font-size: 10px;
   display: inline;
   border: 1px black solid;
   padding: 5px;
 }
+#infoDiv > * > * {
+  font-size: 10px;
+}
+#infoDiv > * > input {
+    width: 40px;
+}
 #material {
-  font-size: 11px;
-  height: 20px;
+  height: 17px;
 }
 #object {
-  font-size: 11px;
-  height: 20px;
+  height: 17px;
 }
 #placementRadius {
-  font-size: 11px;
-  width: 40px;
-  height: 20px;
+  height: 17px;
 }
 #mode {
-  font-size: 11px;
-  height: 20px;
+  height: 17px;
 }
