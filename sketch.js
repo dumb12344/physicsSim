@@ -333,6 +333,7 @@ function draw () {
                     ${i instanceof cylinderObject ? `Radius (cm): ${Math.floor(i.radius * 10) / 10} metres<br/>` : ``}
                     ${i instanceof cylinderObject ? `Material: ${i.material}<br/>` : ``}
                     Position (cm) (pixels): (${Math.floor(i.position.x)}, ${Math.floor(i.position.y)})<br/>
+                    Kinetic energy (cm): ${Math.floor((i.mass * i.velocity.magnitude() ** 2) / 2 * 10) / 10} joules<br/>
                     <span style="color: red;">Velocity (cm) (metres per second): (${Math.floor(i.velocity.x * 10) / 10}, ${Math.floor(i.velocity.y * 10) / 10})</span><br/>
                     <span style="color: blue;">Acceleration (cm) (metres per second): (${Math.floor(i.acceleration.x * 10) / 10}, ${Math.floor(i.acceleration.y * 10) / 10})</span>
                 </div>
