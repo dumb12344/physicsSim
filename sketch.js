@@ -14,8 +14,9 @@ const inputting = () => {
         || document.activeElement.id === "mode"
         || document.activeElement.id === "accelGravity"
         || document.activeElement.id === "dampening"
+        || document.activeElement.id === "placementRadius"
     );
-}
+};
 let pause = false;
 window.onblur = () => pause = true;
 let placementRadius = 0.5;
@@ -35,8 +36,7 @@ let restitution = 0.8;
 let gravityAccel = 9.81;
 document.getElementById("restitutionCoeff").value = 80;
 document.getElementById("accelGravity").value = 9.81;
-// TODO: fix collisions
-// also finish streaks
+// TODO: finish streaks
 class baseObject {
     constructor (x, y, volume = 1, material = "wood") {
         this.position = createVector(x, y);
